@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from math import pi
+from math import e
 
 
 class PCSAFT:
