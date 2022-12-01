@@ -6,7 +6,7 @@ from math import e
 
 
 class PCSAFT:
-    def __init__(self, k, x, m, rho, sigma, eps, boltzmann, temperature):
+    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None):
         """
         :param k: параметр бинарного взаимодействия
         :param x: массив мольных долей компонентов
@@ -34,7 +34,7 @@ class PCSAFT:
 
     # метод расчёта усреднённого числа сегментов
     def calc_m(self) -> float:
-        self.mean_m = np.sum(self.x * self.m)
+        self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
 
     # метод получения коэффициентов a и b
     def transfom_coefs(self, coefs_matrix: pd.DataFrame) -> np.array:
@@ -51,11 +51,11 @@ class PCSAFT:
 
     # метод расчёта температурно-зависимого диаметра сегмента
     def calc_d(self):
-        self.d = self.sigma * (1 - 0.12 * np.exp(-3 * self.eps / (self.boltzmann * self.temperature)))
+        self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (self.boltzmann * self.temperature)))
 
-    # метод расчёта кси(1,2,3)
+    # метод расчёта кси(0,1,2,3)
     def ksi(self, n: int) -> float:
-        return (pi / 6) * self.rho * np.sum(self.x * self.m * np.array([x ** n for x in self.d]))
+        return (pi / 6) * self.rho * np.sum(np.array(self.x) * np.array(self.m) * np.array([x ** n for x in self.d]))
 
     # метод комбинированияв смесях
     def comb_sigma(self, i: int, j: int) -> float:
