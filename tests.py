@@ -1,6 +1,7 @@
 import unittest
 from pc_saft import PCSAFT
 import numpy as np
+import pandas as pd
 
 
 class MyTestCase(unittest.TestCase):
@@ -12,16 +13,19 @@ class MyTestCase(unittest.TestCase):
                               boltzmann=1.380649e-23,
                               rho=9.51e-03,
                               eps=[150.03, 191.42, 208.11],
-                              k=[0.01,0.01,0.01])
+                              k=[0, 3e-4, 1.15e-2],
+                              h=0.0000402)
 
     def test_calc_mean_m(self):
         self.pc_saft.calc_m()
-        self.assertEqual(round(1.783270, 4), round(self.pc_saft.mean_m, 4),
-                         f'Разница составляет {round(1.783270, 4) - round(self.pc_saft.mean_m, 4)}')
+        self.assertEqual(1.783270, self.pc_saft.mean_m,
+                         f'Разница составляет {1.783270 - self.pc_saft.mean_m}')
 
     def test_calc_d(self):
         self.pc_saft.calc_d()
-        self.assertCountEqual([3.7039, 3.5206, 3.6184], self.pc_saft.d)
+        true_d = [3.6394, 3.4846, 3.5886]
+        self.assertCountEqual(true_d, self.pc_saft.d,
+                              f'Разница составляет {true_d - self.pc_saft.d}')
 
     def test_calc_ksi(self):
         self.pc_saft.calc_d()
@@ -30,14 +34,14 @@ class MyTestCase(unittest.TestCase):
         ksi_2 = self.pc_saft.ksi(n=2)
         ksi_3 = self.pc_saft.ksi(n=3)
 
-        self.assertEqual(round(8.88e-03, 4), round(ksi_0, 4),
-                         f'Разница составляет {round(8.88e-03, 4) - round(ksi_0, 4)}')
+        self.assertEqual(8.88e-03, ksi_0,
+                         f'Разница составляет {8.88e-03 - ksi_0}')
         self.assertEqual(round(3.16e-02, 4), round(ksi_1, 4),
-                         f'Разница составляет {round(3.16e-02, 4) - round(ksi_1, 4)}')
-        self.assertEqual(round(1.13e-01, 4), round(ksi_2, 4),
-                         f'Разница составляет {round(1.13e-01, 4) - round(ksi_2, 4)}')
-        self.assertEqual(round(4.02e-01, 4), round(ksi_3, 4),
-                         f'Разница составляет {round(4.02e-01, 4) - round(ksi_3, 4)}')
+                         f'Разница составляет {3.16e-02 - ksi_1}')
+        self.assertEqual(1.13e-01, ksi_2,
+                         f'Разница составляет {1.13e-01 - ksi_2}')
+        self.assertEqual(4.02e-01, ksi_3,
+                         f'Разница составляет {4.02e-01 - ksi_3}')
 
     def test_comb_sigma(self):
         matrix = np.array([[3.704, 3.612, 3.661],
@@ -45,17 +49,98 @@ class MyTestCase(unittest.TestCase):
                            [3.661, 3.570, 3.618]])
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
-                self.assertEqual(round(matrix[i][j], 4), round(self.pc_saft.comb_sigma(i,j), 4),
-                                 f'Разница составляет {round(matrix[i][j], 4) - round(self.pc_saft.comb_sigma(i,j), 4)}')
+                self.assertEqual(matrix[i][j], self.pc_saft.comb_sigma(i, j),
+                                 f'Разница составляет {matrix[i][j] - self.pc_saft.comb_sigma(i, j)}')
 
     def test_comb_eps(self):
-        matrix = np.array([[1.50E+02,1.69E+02,1.75E+02],
-                          [1.69E+02,	1.91E+02,1.99E+02],
-                          [1.75E+02,	1.99E+02,	2.08E+02]])
+        matrix = np.array([[1.50E+02, 1.69E+02, 1.75E+02],
+                           [1.69E+02, 1.91E+02, 1.99E+02],
+                           [1.75E+02, 1.99E+02, 2.08E+02]])
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
-                self.assertEqual(round(matrix[i][j], 4), round(self.pc_saft.comb_eps(i,j), 4),
-                                 f'Разница составляет {round(matrix[i][j], 4) - round(self.pc_saft.comb_eps(i,j), 4)}')
+                self.assertEqual(matrix[i][j], self.pc_saft.comb_eps(i, j),
+                                 f'Разница составляет {round(matrix[i][j], 4) - self.pc_saft.comb_eps(i, j)}')
+
+    def test_calc_c(self):
+        self.pc_saft.calc_d()
+        self.pc_saft.calc_m()
+        self.pc_saft.eta = self.pc_saft.ksi(3)
+        self.assertEqual(2.662e-02, self.pc_saft.calc_c(),
+                         f'Разница составляет {2.662e-02 - self.pc_saft.calc_c()}')
+
+    def test_calc_alpha_hs(self):
+        self.pc_saft.calc_d()
+        self.assertEqual(3.139757, self.pc_saft.calc_alpha_hs(),
+                         f'Разница составляет {3.139757 - self.pc_saft.calc_alpha_hs()}')
+
+    def test_radial_func_distr(self):
+        self.pc_saft.calc_m()
+        self.pc_saft.calc_d()
+        true_g = [3.7877, 3.6817, 3.7527]
+        g = self.pc_saft.radial_func_distr()
+        self.assertCountEqual(true_g, np.diagonal(g),
+                              f'Разница составляет {true_g - np.diagonal(g)}')
+
+    def test_transfom_coefs(self):
+        self.pc_saft.calc_m()
+        true_a = [7.80e-01, 6.94e-01, 1.55e+00, -1.70e+01, 6.93e+01, -1.24e+02, 7.69e+01]
+        true_b = [4.66e-01, 2.56e+00, -1.80e+00, -2.97e+01, 1.14e+02, 1.30e+02, -4.27e+02]
+        a = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='a'))
+        b = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='b', ))
+        self.assertCountEqual(true_a, a,
+                              f'Разница составляет {true_a - a}')
+        self.assertCountEqual(true_b, b,
+                              f'Разница составляет {true_b - b}')
+
+    def test_calc_integral(self):
+        self.pc_saft.calc_d()
+        self.pc_saft.calc_m()
+        self.pc_saft.eta = self.pc_saft.ksi(3)
+        a = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='a'))
+        b = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='b'))
+
+        Ia = self.pc_saft.calc_integral(a)
+        Ib = self.pc_saft.calc_integral(b)
+
+        self.assertEqual(1.038612, Ia,
+                         f'Разница составляет {1.038612 - Ia}')
+        self.assertEqual(1.811019, Ib,
+                         f'Разница составляет {1.811019 - Ib}')
+
+    def test_calc_m2_eps_sigma3(self):
+        m2es3 = self.pc_saft.calc_m2_eps_sigma3()
+        self.assertEqual(1.267e+02, m2es3,
+                         f'Разница составляет {1.267e+02 - m2es3}')
+
+    def test_calc_m2_eps2_sigma3(self):
+        m2e2s3 = self.pc_saft.calc_m2_eps2_sigma3()
+        self.assertEqual(1.087e+02, m2e2s3,
+                         f'Разница составляет {1.087e+02 - m2e2s3}')
+
+    def test_calc_alpha_disp(self):
+        self.pc_saft.calc_d()
+        self.pc_saft.calc_m()
+        alpha_disp = self.pc_saft.calc_alpha_disp()
+        self.assertEqual(-8.1404, alpha_disp,
+                         f'Разница составляет {-8.1404 - alpha_disp}')
+
+    def test_calc_alpha_chain(self):
+        self.pc_saft.calc_m()
+        self.pc_saft.calc_d()
+        alpha_chain = self.pc_saft.calc_alpha_chain()
+        self.assertEqual(4.566659053, alpha_chain,
+                         f'Разница составляет {4.566659053 - alpha_chain}')
+
+    def test_calc_energy_helmholtz(self):
+        alpha_res = self.pc_saft.calc_energy_helmholtz()
+        self.assertEqual(-3.57371, alpha_res,
+                         f'Разница составляет {-3.57371 - alpha_res}')
+
+    def test_calc_z(self):
+        self.pc_saft.calc_m()
+        self.pc_saft.calc_d()
+        self.pc_saft.eta = self.pc_saft.ksi(3)
+        self.pc_saft.calc_z()
 
 if __name__ == '__main__':
     unittest.main()
