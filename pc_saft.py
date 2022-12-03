@@ -6,7 +6,8 @@ from math import e
 
 
 class PCSAFT:
-    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None, h=0.001):
+    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None,
+                 h=0.001):
         """
         :param k: параметр бинарного взаимодействия
         :param x: массив мольных долей компонентов
@@ -29,16 +30,12 @@ class PCSAFT:
         self.sigma = sigma
         self.eps = eps
         self.boltzmann = boltzmann
-        self.mean_m = None
-        self.eta = None
+        self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
         self.temperature = temperature
-        self.d = None
+        self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))
+        self.eta = (pi / 6) * self.rho * np.sum(np.array(self.x) * np.array(self.m) * np.array([x ** 3 for x in self.d]))
         self.h = h
         self.z = None
-
-    # метод расчёта усреднённого числа сегментов - протестировано
-    def calc_m(self) -> float:
-        self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
 
     # метод получения коэффициентов a и b - протестировано
     def transfom_coefs(self, coefs_matrix: pd.DataFrame) -> np.array:
@@ -52,10 +49,6 @@ class PCSAFT:
         for i in range(len(coefs)):
             array_I = np.append(array_I, coefs[i] * self.eta ** i)
         return sum(array_I)
-
-    # метод расчёта температурно-зависимого диаметра сегмента - протестировано
-    def calc_d(self):
-        self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 *self.temperature)))
 
     # метод расчёта кси(0,1,2,3) - протестировано
     def ksi(self, n: int) -> float:
@@ -80,7 +73,8 @@ class PCSAFT:
         m2_eps2_sigma3 = 0
         for i in range(len(self.x)):
             for j in range(len(self.x)):
-                m2_eps2_sigma3 += self.x[i] * self.x[j] * self.m[i] * self.m[j]* ((self.comb_eps(i, j) / (1 * self.temperature)) ** 2) * self.comb_sigma(i, j) ** 3
+                m2_eps2_sigma3 += self.x[i] * self.x[j] * self.m[i] * self.m[j] * (
+                        (self.comb_eps(i, j) / (1 * self.temperature)) ** 2) * self.comb_sigma(i, j) ** 3
         return m2_eps2_sigma3
 
     # метод расчёта m2_eps_sigma3 - протестировано
@@ -88,7 +82,8 @@ class PCSAFT:
         m2_eps_sigma3 = 0
         for i in range(len(self.x)):
             for j in range(len(self.x)):
-                m2_eps_sigma3 += self.x[i] * self.x[j] * self.m[i] * self.m[j]* (self.comb_eps(i, j) / (1 * self.temperature)) * self.comb_sigma(i,j) ** 3
+                m2_eps_sigma3 += self.x[i] * self.x[j] * self.m[i] * self.m[j] * (
+                        self.comb_eps(i, j) / (1 * self.temperature)) * self.comb_sigma(i, j) ** 3
         return m2_eps_sigma3
 
     # метод расчёта остаточной энергии Гельмгольца дисперсионных сил - протестировано
@@ -110,7 +105,7 @@ class PCSAFT:
         ksi2, ksi3 = self.ksi(2), self.ksi(3)
         return (1 / self.ksi(0)) * (
                 (3 * ksi1 * ksi2) / (1 - ksi3) + ksi2 ** 3 / (ksi3 * (1 - ksi3) ** 2) + np.log(1 - ksi3) * (
-                    (ksi2 ** 3 / ksi3 ** 3) - ksi0))
+                (ksi2 ** 3 / ksi3 ** 3) - ksi0))
 
     # метод радиальная функция распределения в системе твёрдых сфер - протестировано
     def radial_func_distr(self):
@@ -131,12 +126,27 @@ class PCSAFT:
 
     # метод расчёта остаточной энергии Гельмгольца - протестировано
     def calc_energy_helmholtz(self):
-        self.calc_m()
-        self.calc_d()
-        self.eta = self.ksi(3)
         return self.calc_alpha_chain() + self.calc_alpha_disp()
 
     def calc_z(self):
-        eta_array = []
-        for i in [-2,-1,1,2]:
-            eta_array.append(self.eta + i * self.h)
+        eta_array = np.array([])
+        for i in [-2, -1, 1, 2]:
+            eta_array = np.append(eta_array, self.eta + i * self.h)
+        rho_array = np.array([])
+        for eta in eta_array:
+            rho_array = np.append(rho_array, 6 * eta / (np.sum(np.array(self.x) * np.array(self.m) * self.d ** 3) * pi))
+        alpha_res_array = np.array([])
+        for rho in rho_array:
+            self.rho = rho
+            alpha_res_array = np.append(alpha_res_array, self.calc_energy_helmholtz())
+        return 1 + self.eta * (
+                    alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2] - alpha_res_array[3]) / (
+                           12 * self.h)
+
+    def calc_pressure(self):
+        z = self.calc_z()
+        return z * self.boltzmann * self.temperature * self.rho * 10e24
+
+
+if __name__ == '__main__':
+    pass
