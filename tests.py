@@ -17,18 +17,16 @@ class MyTestCase(unittest.TestCase):
                               h=0.0000402)
 
     def test_calc_mean_m(self):
-        self.pc_saft.calc_m()
         self.assertEqual(1.783270, self.pc_saft.mean_m,
                          f'Разница составляет {1.783270 - self.pc_saft.mean_m}')
 
     def test_calc_d(self):
-        self.pc_saft.calc_d()
         true_d = [3.6394, 3.4846, 3.5886]
         self.assertCountEqual(true_d, self.pc_saft.d,
                               f'Разница составляет {true_d - self.pc_saft.d}')
 
     def test_calc_ksi(self):
-        self.pc_saft.calc_d()
+        #self.pc_saft.calc_d()
         ksi_0 = self.pc_saft.ksi(n=0)
         ksi_1 = self.pc_saft.ksi(n=1)
         ksi_2 = self.pc_saft.ksi(n=2)
@@ -62,27 +60,27 @@ class MyTestCase(unittest.TestCase):
                                  f'Разница составляет {round(matrix[i][j], 4) - self.pc_saft.comb_eps(i, j)}')
 
     def test_calc_c(self):
-        self.pc_saft.calc_d()
-        self.pc_saft.calc_m()
+        #self.pc_saft.calc_d()
+        #self.pc_saft.calc_m()
         self.pc_saft.eta = self.pc_saft.ksi(3)
         self.assertEqual(2.662e-02, self.pc_saft.calc_c(),
                          f'Разница составляет {2.662e-02 - self.pc_saft.calc_c()}')
 
     def test_calc_alpha_hs(self):
-        self.pc_saft.calc_d()
+        #self.pc_saft.calc_d()
         self.assertEqual(3.139757, self.pc_saft.calc_alpha_hs(),
                          f'Разница составляет {3.139757 - self.pc_saft.calc_alpha_hs()}')
 
     def test_radial_func_distr(self):
-        self.pc_saft.calc_m()
-        self.pc_saft.calc_d()
+        #self.pc_saft.calc_m()
+        #self.pc_saft.calc_d()
         true_g = [3.7877, 3.6817, 3.7527]
         g = self.pc_saft.radial_func_distr()
         self.assertCountEqual(true_g, np.diagonal(g),
                               f'Разница составляет {true_g - np.diagonal(g)}')
 
     def test_transfom_coefs(self):
-        self.pc_saft.calc_m()
+        #self.pc_saft.calc_m()
         true_a = [7.80e-01, 6.94e-01, 1.55e+00, -1.70e+01, 6.93e+01, -1.24e+02, 7.69e+01]
         true_b = [4.66e-01, 2.56e+00, -1.80e+00, -2.97e+01, 1.14e+02, 1.30e+02, -4.27e+02]
         a = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='a'))
@@ -93,8 +91,8 @@ class MyTestCase(unittest.TestCase):
                               f'Разница составляет {true_b - b}')
 
     def test_calc_integral(self):
-        self.pc_saft.calc_d()
-        self.pc_saft.calc_m()
+        #self.pc_saft.calc_d()
+        #self.pc_saft.calc_m()
         self.pc_saft.eta = self.pc_saft.ksi(3)
         a = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='a'))
         b = self.pc_saft.transfom_coefs(pd.read_excel('a-b.xlsx', sheet_name='b'))
@@ -118,15 +116,15 @@ class MyTestCase(unittest.TestCase):
                          f'Разница составляет {1.087e+02 - m2e2s3}')
 
     def test_calc_alpha_disp(self):
-        self.pc_saft.calc_d()
-        self.pc_saft.calc_m()
+        #self.pc_saft.calc_d()
+        #self.pc_saft.calc_m()
         alpha_disp = self.pc_saft.calc_alpha_disp()
         self.assertEqual(-8.1404, alpha_disp,
                          f'Разница составляет {-8.1404 - alpha_disp}')
 
     def test_calc_alpha_chain(self):
-        self.pc_saft.calc_m()
-        self.pc_saft.calc_d()
+        #self.pc_saft.calc_m()
+        #self.pc_saft.calc_d()
         alpha_chain = self.pc_saft.calc_alpha_chain()
         self.assertEqual(4.566659053, alpha_chain,
                          f'Разница составляет {4.566659053 - alpha_chain}')
@@ -137,10 +135,19 @@ class MyTestCase(unittest.TestCase):
                          f'Разница составляет {-3.57371 - alpha_res}')
 
     def test_calc_z(self):
-        self.pc_saft.calc_m()
-        self.pc_saft.calc_d()
+        #self.pc_saft.calc_m()
+        #self.pc_saft.calc_d()
         self.pc_saft.eta = self.pc_saft.ksi(3)
-        self.pc_saft.calc_z()
+
+        self.assertEqual(1.64049719, self.pc_saft.calc_z(),
+                         f'Разница составляет {1.64049719 - self.pc_saft.calc_z()}')
+
+    def test_calc_pressure(self):
+        # проверка на работоспособность метода, правильного зн-я нет
+        pressure = self.pc_saft.calc_pressure()
+        self.assertEqual(0, pressure,
+                         f'Разница составляет {0 - pressure}')
+
 
 if __name__ == '__main__':
     unittest.main()
