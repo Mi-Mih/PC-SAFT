@@ -128,6 +128,7 @@ class PCSAFT:
     def calc_energy_helmholtz(self):
         return self.calc_alpha_chain() + self.calc_alpha_disp()
 
+    # метод расчёта коэффициента сжимаемости - протестирован
     def calc_z(self):
         eta_array = np.array([])
         for i in [-2, -1, 1, 2]:
@@ -143,6 +144,7 @@ class PCSAFT:
                     alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2] - alpha_res_array[3]) / (
                            12 * self.h)
 
+    # метод расчёта давления - протестирован
     def calc_pressure(self):
         z = self.calc_z()
         return z * self.boltzmann * self.temperature * self.rho * 10e24
