@@ -5,6 +5,7 @@ from math import pi
 from math import e
 import logging
 
+
 class PCSAFT:
     def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None,
                  h=0.001):
@@ -21,7 +22,6 @@ class PCSAFT:
         :param eta: Packing fraction
         :param temperature: температура
         :param d: температурно-зависимый диаметр сегмента
-        :param h: шаг для вычисления частной производной
         :param h: сжимаемость
         """
         self.k = k
@@ -34,9 +34,12 @@ class PCSAFT:
         self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
         self.temperature = temperature
         self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))
-        self.eta = (pi / 6) * self.rho * np.sum(np.array(self.x) * np.array(self.m) * np.array([x ** 3 for x in self.d]))
-        self.h = h
+        self.eta = (pi / 6) * self.rho * np.sum(
+            np.array(self.x) * np.array(self.m) * np.array([x ** 3 for x in self.d]))
+
         self.z = None
+        self.pressure = None
+        self.fugacity_coeffs = None
 
         logging.basicConfig(level=10)
         self.logger = logging.getLogger()
@@ -63,12 +66,12 @@ class PCSAFT:
 
     # метод комбинированияв смесях - протестировано
     def comb_sigma(self, i: int, j: int) -> float:
-        self.logger.debug(f' sigma_{i,j} calculation started')
+        self.logger.debug(f' sigma_{i, j} calculation started')
         return 0.5 * (self.sigma[i] + self.sigma[j])
 
     # метод комбинирования в смесях - протестировано
     def comb_eps(self, i: int, j: int) -> float:
-        self.logger.debug(f' epsilon_{i,j} calculation started')
+        self.logger.debug(f' epsilon_{i, j} calculation started')
         return (1 - self.k[j]) * (self.eps[i] * self.eps[j]) ** 0.5
 
     # метод расчёта сжимаемости - протестировано
@@ -147,9 +150,10 @@ class PCSAFT:
     # метод расчёта коэффициента сжимаемости - протестирован
     def calc_z(self):
         self.logger.debug(f' z calculation started')
+        rho_1 = self.rho
         eta_array = np.array([])
         for i in [-2, -1, 1, 2]:
-            eta_array = np.append(eta_array, self.eta + i * self.h)
+            eta_array = np.append(eta_array, self.eta + i * self.eta * 0.0001)
         rho_array = np.array([])
         for eta in eta_array:
             rho_array = np.append(rho_array, 6 * eta / (np.sum(np.array(self.x) * np.array(self.m) * self.d ** 3) * pi))
@@ -157,15 +161,44 @@ class PCSAFT:
         for rho in rho_array:
             self.rho = rho
             alpha_res_array = np.append(alpha_res_array, self.calc_energy_helmholtz())
+        self.rho = rho_1
         return 1 + self.eta * (
-                    alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2] - alpha_res_array[3]) / (
-                           12 * self.h)
+                alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2] - alpha_res_array[3]) / (
+                       12 * self.eta * 0.0001)
 
     # метод расчёта давления - протестирован
     def calc_pressure(self):
         self.logger.debug(f' pressure calculation started')
         z = self.calc_z()
-        return z * self.boltzmann * self.temperature * self.rho * 10e24
+        self.pressure = z * self.boltzmann * self.temperature * self.rho * 10e24
+
+    # метод расчёта частных производных
+    def calc_partial_x(self):
+        x_1 = self.x
+        alpha_res_array = np.array([])
+        partial_array = np.array([])
+        for i in range(len(self.x)):
+            alpha_res_array = np.array([])
+            h = 12 * self.x[i] * 0.0001
+
+            for j in [-2, -1, 1, 2]:
+                self.x[i] += j*0.0001*self.x[i]
+                alpha_res_array = np.append(alpha_res_array, self.calc_energy_helmholtz())
+            partial_array = np.append(partial_array, (alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2]
+                                                     - alpha_res_array[3]) / h)
+        self.x=x_1
+        return partial_array
+
+    # метод расчёта коэффициентов летучести
+    def calc_fugacity_coeff(self):
+        alpha_res = self.calc_energy_helmholtz()
+        z = self.calc_z()
+        partials = self.calc_partial_x()
+        fugacity_coeffs = np.array([])
+        for i in range(len(self.x)):
+            fugacity_coeffs = np.append(fugacity_coeffs, np.exp(
+                alpha_res + (z - 1) + partials[i] - np.sum(self.x * partials) - np.log(z)))
+        self.fugacity_coeffs = fugacity_coeffs
 
 
 if __name__ == '__main__':
