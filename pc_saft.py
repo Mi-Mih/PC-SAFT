@@ -7,8 +7,7 @@ import logging
 
 
 class PCSAFT:
-    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None,
-                 h=0.001):
+    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None):
         """
         физические параметры
         :param k: параметр бинарного взаимодействия
@@ -37,10 +36,12 @@ class PCSAFT:
         self.eta = (pi / 6) * self.rho * np.sum(
             np.array(self.x) * np.array(self.m) * np.array([x ** 3 for x in self.d]))
 
+        # параметры модели
         self.z = None
         self.pressure = None
         self.fugacity_coeffs = None
 
+        # logger
         logging.basicConfig(level=10)
         self.logger = logging.getLogger()
 
@@ -172,7 +173,7 @@ class PCSAFT:
         z = self.calc_z()
         self.pressure = z * self.boltzmann * self.temperature * self.rho * 10e24
 
-    # метод расчёта частных производных
+    # метод расчёта частных производных - протестирован
     def calc_partial_x(self):
         self.logger.debug(f' partials x calculation started')
         x_1 = self.x
@@ -190,7 +191,7 @@ class PCSAFT:
         self.x=x_1
         return partial_array
 
-    # метод расчёта коэффициентов летучести
+    # метод расчёта коэффициентов летучести - протестирован
     def calc_fugacity_coeff(self):
         self.logger.debug(f' fugacity coeffs calculation started')
         alpha_res = self.calc_energy_helmholtz()
@@ -201,6 +202,13 @@ class PCSAFT:
             fugacity_coeffs = np.append(fugacity_coeffs, np.exp(
                 alpha_res + (z - 1) + partials[i] - np.sum(self.x * partials) - np.log(z)))
         self.fugacity_coeffs = fugacity_coeffs
+
+    # метод расчёта мольных долей - протестирован
+    # current - текущая фаза, forecast - неизвестная фаза
+    # меняем плотность, молярный объём и eta
+    def calc_lv_proportion(self, proportion, fugacity_current, fugacity_forecast):
+        self.logger.debug(f' vapour-liquid calculation started')
+        return (proportion * fugacity_current)/fugacity_forecast
 
 
 if __name__ == '__main__':
