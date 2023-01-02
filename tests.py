@@ -144,10 +144,21 @@ class MyTestCase(unittest.TestCase):
 
     def test_calc_pressure(self):
         # проверка на работоспособность метода, правильного зн-я нет
-        pressure = self.pc_saft.calc_pressure()
-        self.assertEqual(0, pressure,
-                         f'Разница составляет {0 - pressure}')
+        self.pc_saft.calc_pressure()
+        self.assertEqual(0, self.pc_saft.pressure,
+                         f'Разница составляет {0 - self.pc_saft.pressure}')
 
+    def test_partial_x(self):
+        true_partials = np.array([0.4887, -1.786, -3.244])
+        partials = self.pc_saft.calc_partial_x()
+        self.assertCountEqual(true_partials, partials,
+                              f'Разница составляет {true_partials - partials}')
+
+    def test_fugacity_coeffs(self):
+        self.pc_saft.calc_fugacity_coeff()
+        true_fugacity_coeffs = np.array([0.603,0.06199,0.01442])
+        self.assertCountEqual(true_fugacity_coeffs,  self.pc_saft.fugacity_coeffs,
+                         f'Разница составляет {true_fugacity_coeffs -  self.pc_saft.fugacity_coeffs}')
 
 if __name__ == '__main__':
     unittest.main()
