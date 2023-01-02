@@ -174,6 +174,7 @@ class PCSAFT:
 
     # метод расчёта частных производных
     def calc_partial_x(self):
+        self.logger.debug(f' partials x calculation started')
         x_1 = self.x
         alpha_res_array = np.array([])
         partial_array = np.array([])
@@ -191,6 +192,7 @@ class PCSAFT:
 
     # метод расчёта коэффициентов летучести
     def calc_fugacity_coeff(self):
+        self.logger.debug(f' fugacity coeffs calculation started')
         alpha_res = self.calc_energy_helmholtz()
         z = self.calc_z()
         partials = self.calc_partial_x()
