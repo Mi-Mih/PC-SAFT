@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from math import pi
-from math import e
 import logging
 
 
@@ -177,18 +175,18 @@ class PCSAFT:
     def calc_partial_x(self):
         self.logger.debug(f' partials x calculation started')
         x_1 = self.x
-        alpha_res_array = np.array([])
         partial_array = np.array([])
         for i in range(len(self.x)):
             alpha_res_array = np.array([])
             h = 12 * self.x[i] * 0.0001
 
             for j in [-2, -1, 1, 2]:
-                self.x[i] += j*0.0001*self.x[i]
+                self.x[i] += j * 0.0001 * self.x[i]
                 alpha_res_array = np.append(alpha_res_array, self.calc_energy_helmholtz())
-            partial_array = np.append(partial_array, (alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2]
-                                                     - alpha_res_array[3]) / h)
-        self.x=x_1
+            partial_array = np.append(partial_array,
+                                      (alpha_res_array[0] - 8 * alpha_res_array[1] + 8 * alpha_res_array[2]
+                                       - alpha_res_array[3]) / h)
+        self.x = x_1
         return partial_array
 
     # метод расчёта коэффициентов летучести - протестирован
@@ -208,7 +206,7 @@ class PCSAFT:
     # меняем плотность, молярный объём и eta
     def calc_lv_proportion(self, proportion, fugacity_current, fugacity_forecast):
         self.logger.debug(f' vapour-liquid calculation started')
-        return (proportion * fugacity_current)/fugacity_forecast
+        return (proportion * fugacity_current) / fugacity_forecast
 
 
 if __name__ == '__main__':
