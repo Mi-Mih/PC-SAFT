@@ -2,6 +2,7 @@ import unittest
 from pc_saft import PCSAFT
 import numpy as np
 import pandas as pd
+from pc_saft import launch_pcsaft
 
 
 class MyTestCase(unittest.TestCase):
@@ -159,6 +160,28 @@ class MyTestCase(unittest.TestCase):
         true_fugacity_coeffs = np.array([0.603, 0.06199, 0.01442])
         self.assertCountEqual(true_fugacity_coeffs, self.pc_saft.fugacity_coeffs,
                               f'Разница составляет {true_fugacity_coeffs - self.pc_saft.fugacity_coeffs}')
+
+    def test_launch_pcsaft(self):
+        liquid_state = {'x': [0.1000, 0.3000, 0.6000],
+                        'm': [1, 1.6069, 2.002],
+                        'sigma': [3.7039, 3.5206, 3.6184],
+                        'temperature': 233.15,
+                        'boltzmann': 1.380649e-23,
+                        'rho': 1.18e-2,
+                        'eps': [150.03, 191.42, 208.11],
+                        'k': [0, 3e-4, 1.15e-2]}
+
+        vapour_state = {'x': [0.1000, 0.3000, 0.6000],
+                        'm': [1, 1.6069, 2.002],
+                        'sigma': [3.7039, 3.5206, 3.6184],
+                        'temperature': 233.15,
+                        'boltzmann': 1.380649e-23,
+                        'rho': 2.37e-12,
+                        'eps': [150.03, 191.42, 208.11],
+                        'k': [0, 3e-4, 1.15e-2]}
+
+        df = launch_pcsaft(liquid_state, vapour_state)
+        print(df)
 
 
 if __name__ == '__main__':
