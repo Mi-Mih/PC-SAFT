@@ -180,8 +180,8 @@ class MyTestCase(unittest.TestCase):
                         'eps': [150.03, 191.42, 208.11],
                         'k': [0, 3e-4, 1.15e-2]}
 
-        df = launch_pcsaft(liquid_state, vapour_state)
-        print(df)
+        state = launch_pcsaft(liquid_state, vapour_state)
+        print(state)
 
 
 if __name__ == '__main__':
