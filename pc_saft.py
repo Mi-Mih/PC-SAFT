@@ -217,26 +217,26 @@ def launch_pcsaft(state_1: dict, state_2: dict, eps=1e-3, current_state='liquid'
     current = PCSAFT(**state_1)
     forecast = PCSAFT(**state_2)
 
-    for eta_forec in [0.05, 0.07]: # доделать
-        forecast.eta = eta_forec
-        forecast.rho = 6 * eta_forec / np.sum(
-            np.array(current.x) * np.array(current.m) * np.array([x ** 3 for x in forecast.d]))
-        for eta_cur in [0.000003, 0.00000008]: # доделать
-            current.eta = eta_cur
-            current.rho = 6 * eta_cur / np.sum(
-                np.array(forecast.x) * np.array(forecast.m) * np.array([x ** 3 for x in current.d]))
-            current.calc_pressure()
-            forecast.calc_pressure()
+    for eta_cur in [0.0003, 0.0008]: # доделать
+        current.eta = eta_cur
+        current.rho = 6 * eta_cur / np.sum(
+            np.array(forecast.x) * np.array(forecast.m) * np.array([x ** 3 for x in current.d]))
+        current.calc_pressure()
+        current.calc_fugacity_coeff()
 
-            current.calc_fugacity_coeff()
+        for eta_forec in [0.05, 0.03]: # доделать
+            forecast.eta = eta_forec
+            forecast.rho = 6 * eta_forec / np.sum(
+                np.array(current.x) * np.array(current.m) * np.array([x ** 3 for x in forecast.d]))
+            forecast.calc_pressure()
             forecast.calc_fugacity_coeff()
 
             forecast.x = forecast.calc_lv_proportion(current.x, current.fugacity_coeffs, forecast.fugacity_coeffs)
             if len(forecast.x) != len([y for y in forecast.x if y==y]):
                 continue
-
             x_scaled = [mol / sum(forecast.x) for mol in forecast.x]
             forecast.x = x_scaled
+
             dicts_correct['cur_eta'].append(eta_cur)
             dicts_correct['forec_eta'].append(eta_forec)
             dicts_correct['error'].append(abs(current.pressure - forecast.pressure))
@@ -244,7 +244,7 @@ def launch_pcsaft(state_1: dict, state_2: dict, eps=1e-3, current_state='liquid'
             dicts_correct['forec_x'].append(x_scaled)
 
     df_correct = pd.DataFrame(dicts_correct)
-    return df_correct
+    return df_correct.iloc[df_correct.error.idxmin()]
 
 
 if __name__ == '__main__':
