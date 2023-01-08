@@ -72,7 +72,7 @@ class PCSAFT:
     # метод комбинирования в смесях - протестировано
     def comb_eps(self, i: int, j: int) -> float:
         # self.logger.debug(f' epsilon_{i, j} calculation started')
-        return (1 - self.k[j]) * (self.eps[i] * self.eps[j]) ** 0.5
+        return (1 - self.k[i][j]) * (self.eps[i] * self.eps[j]) ** 0.5
 
     # метод расчёта сжимаемости - протестировано
     def calc_c(self) -> float:
