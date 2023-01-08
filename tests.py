@@ -14,7 +14,9 @@ class MyTestCase(unittest.TestCase):
                               boltzmann=1.380649e-23,
                               rho=9.51e-03,
                               eps=[150.03, 191.42, 208.11],
-                              k=[0, 3e-4, 1.15e-2],
+                              k=[[0.00e+00, 3.00e-04, 1.15e-02],
+                                [3.00e-04,	0.00e+00,	5.10e-03],
+                                [1.15e-02,	5.10e-03,	0.00e+00]]
                               )
 
     def test_calc_mean_m(self):
@@ -169,7 +171,10 @@ class MyTestCase(unittest.TestCase):
                         'boltzmann': 1.380649e-23,
                         'rho': 1.18e-2,
                         'eps': [150.03, 191.42, 208.11],
-                        'k': [0, 3e-4, 1.15e-2]}
+                        'k': [[0.00e+00, 3.00e-04, 1.15e-02],
+                              [3.00e-04, 0.00e+00,	5.10e-03],
+                              [1.15e-02, 5.10e-03,	0.00e+00]]
+                        }
 
         vapour_state = {'x': [0.1000, 0.3000, 0.6000],
                         'm': [1, 1.6069, 2.002],
@@ -178,7 +183,9 @@ class MyTestCase(unittest.TestCase):
                         'boltzmann': 1.380649e-23,
                         'rho': 2.37e-12,
                         'eps': [150.03, 191.42, 208.11],
-                        'k': [0, 3e-4, 1.15e-2]}
+                        'k': [[0.00e+00, 3.00e-04, 1.15e-02],
+                                [3.00e-04,	0.00e+00,	5.10e-03],
+                                [1.15e-02,	5.10e-03,	0.00e+00]]}
 
         state = launch_pcsaft(liquid_state, vapour_state)
         print(state)
