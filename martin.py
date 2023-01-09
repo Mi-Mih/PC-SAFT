@@ -1,11 +1,13 @@
 import numpy as np
 from chemicals.rachford_rice import flash_inner_loop
+from scipy.optimize import brentq
 
 
 class MARTIN:
-    def __init__(self, omega: float, T: float, T_cr: np.array, P: float, P_cr: np.array, z: np.array, c: np.array):
+    def __init__(self, omega: float, T: float, T_cr: np.array, P: float, P_cr: np.array, z: np.array,
+                 matrix_c: np.array):
         self.omega = omega
-        self.c = c
+        self.matrix_c = matrix_c
         self.T = T
         self.T_cr = T_cr
         self.P = P
@@ -23,6 +25,8 @@ class MARTIN:
         self.x = None
         self.y = None
         self.T_r = T / T_cr
+        self.fugacity_l = 0
+        self.fugacity_v = 0
 
     # формула Вильсона
     def calc_K(self):
@@ -68,31 +72,89 @@ class MARTIN:
     '''
 
     # расчёты для смесей
-    def calc_am(self):
+    def calc_am(self, flag):
+        if flag == 'l':
+            array = self.x
+        else:
+            array = self.y
         glob_sum = 0
-        for i in range(len(self.y)):
+        for i in range(len(array)):
             loc_sum = 0
-            for j in range(len(self.y)):
-                loc_sum += self.y[i] * self.y[j] * (1 - self.c[i][j]) * (self.a[i] * self.a[j]) ** 0.5
+            for j in range(len(array)):
+                loc_sum += array[i] * array[j] * (1 - self.matrix_c[i][j]) * (self.a[i] * self.a[j]) ** 0.5
             glob_sum += loc_sum
         return glob_sum
 
-    def calc_bm(self):
-        return np.sum(self.y * self.b)
-    def calc_cm(self):
-        return np.sum(self.y * self.c)
+    def calc_bm(self, flag: str):
+        if flag == 'l':
+            array = self.x
+        else:
+            array = self.y
+        return np.sum(array * self.b)
 
-    def calc_Am(self):
-        return self.calc_am() * self.P/(self.R**2 * self.T**2)
-    def calc_Bm(self):
-        return self.calc_bm() * self.P/(self.R * self.T)
-    def calc_Cm(self):
-        return self.calc_cm() * self.P/(self.R * self.T)
+    def calc_cm(self, flag: str):
+        if flag == 'l':
+            array = self.x
+        else:
+            array = self.y
+        return np.sum(array * self.c)
+
+    def calc_Am(self, flag: str):
+        return self.calc_am(flag) * self.P / (self.R ** 2 * self.T ** 2)
+
+    def calc_Bm(self, flag: str):
+        return self.calc_bm(flag) * self.P / (self.R * self.T)
+
+    def calc_Cm(self, flag: str):
+        return self.calc_cm(flag) * self.P / (self.R * self.T)
 
     # расчёты для компонентов
     def calc_Ai(self):
-        return self.calc_a() * self.P/(self.R**2 * self.T**2)
+        return self.calc_a() * self.P / (self.R ** 2 * self.T ** 2)
+
     def calc_Bi(self):
-        return self.calc_b() * self.P/(self.R * self.T)
+        return self.calc_b() * self.P / (self.R * self.T)
+
     def calc_Ci(self):
-        return self.calc_c() * self.P/(self.R * self.T)
+        return self.calc_c() * self.P / (self.R * self.T)
+
+    def z_equation(self, z):
+        return z ** 3 + (self.calc_Am() - self.calc_Bm - 1) * z ** 2 + (
+                    self.calc_Am() - self.calc_Bm() * self.calc_Cm() - self.calc_Cm()) * z - self.calc_Am() * self.calc_Bm()
+
+    def solve_z_equation(self, flag): # доделать
+        return brentq(self.z_equation(), 0, 100000)
+
+    def calc_fugacity_coeffs(self, flag):
+
+        Z = self.solve_z_equation()
+        if flag == 'l':
+            array = self.x
+        else:
+            array = self.y
+        matrix_a = np.zeros((len(array), len(array)))
+        for i in range(len(array)):
+            for j in range(len(array)):
+                matrix_a[i][j] = (1 - self.matrix_c[i][j]) * (self.a[i] * self.a[j]) ** 0.5
+
+        sum = 0
+        for j in range(len(array)):
+            sum += np.dot(array * matrix_a)
+
+        return np.log(array * self.P) - np.log(Z - self.calc_Bm(flag)) \
+               - (2 * sum / self.calc_am(flag) - self.calc_c() / self.calc_cm(flag)) * np.log(
+            (Z + self.calc_Cm(flag)) / Z) * self.calc_am(flag) / (self.calc_Cm(flag))
+
+    def launch_MartinE(self):
+        while sum(np.abs(self.fugacity_l/self.fugacity_v - 1) > 10e-5)!=len(self.fugacity_l):
+                self.calc_a()
+                self.calc_b()
+                self.calc_c()
+                self.calc_K()
+                self.solve_RR()
+                self.fugacity_l = self.calc_fugacity_coeffs('l')
+                self.fugacity_v = self.calc_fugacity_coeffs('v')
+                self.K = self.K * self.fugacity_l / self.fugacity_v
+
+if __name__ == '__main__':
+    pass
