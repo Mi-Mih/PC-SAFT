@@ -118,14 +118,12 @@ class MARTIN:
         for value in all_roots:
             if abs(value.imag) < 0.00001 and value.real > 0:
                 real_roots.append(value.real)
-        if flag == 'l':
-            Z = min(real_roots)
-        else:
-            Z = max(real_roots)
 
         if flag == 'l':
             array = self.x
+            Z = min(real_roots)
         else:
+            Z = max(real_roots)
             array = self.y
         matrix_a = np.zeros((len(array), len(array)))
         for i in range(len(array)):
