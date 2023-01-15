@@ -1,6 +1,5 @@
 import numpy as np
 from chemicals.rachford_rice import flash_inner_loop
-from scipy.optimize import brentq
 
 
 class MARTIN:
@@ -64,13 +63,6 @@ class MARTIN:
     def solve_RR(self):
         _, self.x, self.y = flash_inner_loop(self.z, self.K)
 
-    '''
-    def calc_liquid_z(self):
-        self.x = self.z / (self.V*(self.K-1)+1)
-    def calc_vapour_z(self):
-        self.y = self.z * self.K/(self.V*(self.K-1)+1)
-    '''
-
     # расчёты для смесей
     def calc_am(self, flag):
         if flag == 'l':
@@ -118,16 +110,19 @@ class MARTIN:
     def calc_Ci(self):
         return self.calc_c() * self.P / (self.R * self.T)
 
-    def z_equation(self, z):
-        return z ** 3 + (self.calc_Am() - self.calc_Bm - 1) * z ** 2 + (
-                    self.calc_Am() - self.calc_Bm() * self.calc_Cm() - self.calc_Cm()) * z - self.calc_Am() * self.calc_Bm()
-
-    def solve_z_equation(self, flag): # доделать
-        return brentq(self.z_equation(), 0, 100000)
-
     def calc_fugacity_coeffs(self, flag):
+        real_roots = []
+        finding_z_factor = [1, self.calc_Am() - self.calc_Bm - 1, self.calc_Am() - self.calc_Bm() * self.calc_Cm() - self.calc_Cm(), self.calc_Am() * self.calc_Bm() ]
+        all_roots = np.roots(finding_z_factor)
 
-        Z = self.solve_z_equation()
+        for value in all_roots:
+            if abs(value.imag) < 0.00001 and value.real > 0:
+                real_roots.append(value.real)
+        if flag == 'liquid':
+            Z = min(real_roots)
+        else:
+            Z = max(real_roots)
+
         if flag == 'l':
             array = self.x
         else:
@@ -141,9 +136,9 @@ class MARTIN:
         for j in range(len(array)):
             sum += np.dot(array * matrix_a)
 
-        return np.log(array * self.P) - np.log(Z - self.calc_Bm(flag)) \
+        return np.exp(np.log(array * self.P) - np.log(Z - self.calc_Bm(flag)) \
                - (2 * sum / self.calc_am(flag) - self.calc_c() / self.calc_cm(flag)) * np.log(
-            (Z + self.calc_Cm(flag)) / Z) * self.calc_am(flag) / (self.calc_Cm(flag))
+            (Z + self.calc_Cm(flag)) / Z) * self.calc_am(flag) / (self.calc_Cm(flag)))
 
     def launch_MartinE(self):
         while sum(np.abs(self.fugacity_l/self.fugacity_v - 1) > 10e-5)!=len(self.fugacity_l):
