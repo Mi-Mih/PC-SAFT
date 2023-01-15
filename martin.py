@@ -118,7 +118,7 @@ class MARTIN:
         for value in all_roots:
             if abs(value.imag) < 0.00001 and value.real > 0:
                 real_roots.append(value.real)
-        if flag == 'liquid':
+        if flag == 'l':
             Z = min(real_roots)
         else:
             Z = max(real_roots)
