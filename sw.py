@@ -36,6 +36,7 @@ class SW:
     # вспомогательные коэффициенты
     def solve_betta_eq(self):
         all_roots = np.roots([(6 * self.omega), 3, 3, -1])
+        all_roots=all_roots[all_roots.imag==0]
         return sorted(all_roots[all_roots > 0])[0]
 
     def calc_omega_b(self):
