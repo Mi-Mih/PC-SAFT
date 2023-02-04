@@ -5,14 +5,14 @@ from chemicals.rachford_rice import flash_inner_loop
 class MARTIN:
     def __init__(self, omega: float, T: float, T_cr: np.array, P: float, P_cr: np.array, z: np.array,
                  matrix_c: np.array):
-        self.omega = omega
-        self.matrix_c = matrix_c
-        self.T = T
-        self.T_cr = T_cr
-        self.P = P
-        self.P_cr = P_cr
-        self.z = z
-        self.R = 1  # исправить
+        self.omega = omega  # ацентрический фактор без размерности
+        self.matrix_c = matrix_c  # коэффы попарного взаимодействия
+        self.T = T # температура K
+        self.T_cr = T_cr # критическая температура K
+        self.P = P # давление Па
+        self.P_cr = P_cr # критическое давление Па
+        self.z = z # компонентный мольный состав смеси
+        self.R = 8.31 # универсальная газовая постоянная
 
         # параметры уравнения состояния
         self.a = None
@@ -20,10 +20,11 @@ class MARTIN:
         self.c = None
 
         # параметры модели
-        self.K = None
-        self.x = None
-        self.y = None
+        self.K = None #коэффициент распределения компонентов смеси
+        self.x = None # жидкая фаза
+        self.y = None # газовая фаза
         self.T_r = T / T_cr
+        # коэффициенты летучести
         self.fugacity_l = 0
         self.fugacity_v = 0
 
@@ -102,17 +103,19 @@ class MARTIN:
 
     # расчёты для компонентов
     def calc_Ai(self):
-        return self.calc_a() * self.P / (self.R ** 2 * self.T ** 2)
+        return self.a * self.P / (self.R ** 2 * self.T ** 2)
 
     def calc_Bi(self):
-        return self.calc_b() * self.P / (self.R * self.T)
+        return self.b * self.P / (self.R * self.T)
 
     def calc_Ci(self):
         return self.calc_c() * self.P / (self.R * self.T)
 
     def calc_fugacity_coeffs(self, flag):
         real_roots = []
-        finding_z_factor = [1, self.calc_Am() - self.calc_Bm - 1, self.calc_Am() - self.calc_Bm() * self.calc_Cm() - self.calc_Cm(), self.calc_Am() * self.calc_Bm() ]
+        finding_z_factor = [1,
+                            self.calc_Cm() - self.calc_Bm - 1, self.calc_Am() - self.calc_Bm() * self.calc_Cm() - self.calc_Cm(),
+                            self.calc_Am() * self.calc_Bm()]
         all_roots = np.roots(finding_z_factor)
 
         for value in all_roots:
@@ -132,14 +135,19 @@ class MARTIN:
 
         sum = 0
         for j in range(len(array)):
-            sum += np.dot(array * matrix_a)
+            sum += array * matrix_a[:, j]
 
         return np.exp(np.log(array * self.P) - np.log(Z - self.calc_Bm(flag)) \
-               - (2 * sum / self.calc_am(flag) - self.calc_c() / self.calc_cm(flag)) * np.log(
-            (Z + self.calc_Cm(flag)) / Z) * self.calc_am(flag) / (self.calc_Cm(flag)))
+               - (2 * sum / self.calc_am(flag) - self.c / self.calc_cm(flag)) * np.log(
+            (Z + self.calc_Cm(flag)) / Z) * self.calc_am(flag) / (self.calc_Cm(flag))) + self.calc_Bi()/(Z-self.calc_Bm(flag)) \
+               - self.calc_Am(flag)/self.calc_Cm(flag) * (self.calc_Ci()/(Z+self.calc_Cm(flag)))
 
     def launch_MartinE(self):
+        iter = 0
         while sum(np.abs(self.fugacity_l/self.fugacity_v - 1) > 10e-5)!=len(self.fugacity_l):
+                iter+=1
+                if iter>100:
+                    break
                 self.calc_a()
                 self.calc_b()
                 self.calc_c()
