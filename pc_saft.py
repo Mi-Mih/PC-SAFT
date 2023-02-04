@@ -2,33 +2,32 @@ import numpy as np
 import pandas as pd
 from math import pi
 import logging
-import random
 
 
 class PCSAFT:
-    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, boltzmann=None, temperature=None):
+    def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, temperature=None):
         """
         физические параметры
-        :param k: параметр бинарного взаимодействия
-        :param x: массив мольных долей компонентов
-        :param m: массив кол-ва сегментов в молекуле компонента
+        :param k: параметр бинарного взаимодействия безразмерный
+        :param x: массив мольных долей компонентов Моль
+        :param m: массив кол-ва сегментов в молекуле компонента безразмерный
         :param rho: плотность
-        :param sigma: массив диаметров сегментов
-        :param eps: массив энергетических параметров сегментов/ постоянная Больцмана
+        :param sigma: массив диаметров сегментов нм
+        :param eps: массив энергетических параметров сегментов K
         :param boltzmann: постоянная Больцмана
         :param mean_m: усреднённое число сегментов
-        :param eta: Packing fraction
-        :param temperature: температура
-        :param d: температурно-зависимый диаметр сегмента
-        :param h: сжимаемость
+        :param eta: Packing fraction безразмерный
+        :param temperature: температура K
+        :param d: температурно-зависимый диаметр сегмента нм
+        :param z: сжимаемость
         """
         self.k = k
         self.x = x
         self.m = m
         self.rho = rho
         self.sigma = sigma
-        self.eps = eps
-        self.boltzmann = boltzmann
+        self.boltzmann = 1.380649e-23
+        self.eps = eps / self.boltzmann
         self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
         self.temperature = temperature
         self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))
@@ -211,20 +210,25 @@ class PCSAFT:
 
 
 # метод расчёта парожидкостного равновесия
-def launch_pcsaft(state_1: dict, state_2: dict, eps=1e-3, current_state='liquid'):
+def launch_pcsaft(state_1: dict, state_2: dict, current_state='liquid'):
     dicts_correct = {'cur_eta': [], 'forec_eta': [], 'error': [], 'cur_x': [], 'forec_x': []}
-
+    if current_state == 'liquid':
+        cur_array = [0.0003, 0.0005, 0.0008]
+        forec_array = [0.05, 0.03, 0.02, 0.01]
+    else:
+        cur_array = [0.05, 0.03, 0.02, 0.01]
+        forec_array = [0.0002, 0.0003, 0.0005, 0.0008, 0.001]
     current = PCSAFT(**state_1)
     forecast = PCSAFT(**state_2)
 
-    for eta_cur in [0.0003, 0.0008]: # доделать
+    for eta_cur in cur_array:  # доделать
         current.eta = eta_cur
         current.rho = 6 * eta_cur / np.sum(
             np.array(forecast.x) * np.array(forecast.m) * np.array([x ** 3 for x in current.d]))
         current.calc_pressure()
         current.calc_fugacity_coeff()
 
-        for eta_forec in [0.05, 0.03]: # доделать
+        for eta_forec in forec_array:  # доделать
             forecast.eta = eta_forec
             forecast.rho = 6 * eta_forec / np.sum(
                 np.array(current.x) * np.array(current.m) * np.array([x ** 3 for x in forecast.d]))
@@ -232,7 +236,7 @@ def launch_pcsaft(state_1: dict, state_2: dict, eps=1e-3, current_state='liquid'
             forecast.calc_fugacity_coeff()
 
             forecast.x = forecast.calc_lv_proportion(current.x, current.fugacity_coeffs, forecast.fugacity_coeffs)
-            if len(forecast.x) != len([y for y in forecast.x if y==y]):
+            if len(forecast.x) != len([y for y in forecast.x if y == y]):
                 continue
             x_scaled = [mol / sum(forecast.x) for mol in forecast.x]
             forecast.x = x_scaled
