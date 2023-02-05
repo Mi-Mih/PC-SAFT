@@ -27,7 +27,7 @@ class PCSAFT:
         self.rho = rho
         self.sigma = sigma
         self.boltzmann = 1.380649e-23
-        self.eps = eps / self.boltzmann
+        self.eps = np.array(eps)*(1/self.boltzmann)
         self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
         self.temperature = temperature
         self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))
