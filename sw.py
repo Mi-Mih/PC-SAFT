@@ -8,11 +8,11 @@ class SW:
         self.omega = np.array(omega)  # ацентрический фактор без размерности
         self.matrix_c = matrix_c  # коэффы попарного взаимодействия
         self.T = T  # температура K
-        self.T_cr = T_cr  # критическая температура K
+        self.T_cr = np.array(T_cr)  # критическая температура K
         self.P = P  # давление Па
-        self.P_cr = P_cr  # критическое давление Па
+        self.P_cr = np.array(P_cr)  # критическое давление Па
         self.z = z  # компонентный мольный состав смеси
-        self.R = 8.31  # универсальная газовая постоянная
+        self.R = 0.00831  # универсальная газовая постоянная
 
         # параметры уравнения состояния
         self.a = np.zeros((len(z)))
@@ -24,7 +24,7 @@ class SW:
         self.K = np.zeros((len(z)))  # коэффициент распределения компонентов смеси
         self.x = np.zeros((len(z)))  # жидкая фаза
         self.y = np.zeros((len(z)))  # газовая фаза
-        self.T_r = T / T_cr
+        self.T_r = T / np.array(T_cr)
         # коэффициенты летучести
         self.fugacity_l = np.zeros((len(z)))
         self.fugacity_v = np.zeros((len(z)))
