@@ -8,18 +8,14 @@ class PCSAFT:
     def __init__(self, k=None, x=None, m=None, rho=None, sigma=None, eps=None, temperature=None):
         """
         физические параметры
-        :param k: параметр бинарного взаимодействия безразмерный
+        :param k: параметр бинарного взаимодействия безразмерный массив
         :param x: массив мольных долей компонентов Моль
         :param m: массив кол-ва сегментов в молекуле компонента безразмерный
         :param rho: плотность
         :param sigma: массив диаметров сегментов нм
         :param eps: массив энергетических параметров сегментов K
-        :param boltzmann: постоянная Больцмана
         :param mean_m: усреднённое число сегментов
-        :param eta: Packing fraction безразмерный
         :param temperature: температура K
-        :param d: температурно-зависимый диаметр сегмента нм
-        :param z: сжимаемость
         """
         self.k = k
         self.x = x
@@ -30,12 +26,12 @@ class PCSAFT:
         self.eps = np.array(eps)*(1/self.boltzmann)
         self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
         self.temperature = temperature
-        self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))
+        self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))#температурно-зависимый диаметр сегмента нм
         self.eta = (pi / 6) * self.rho * np.sum(
-            np.array(self.x) * np.array(self.m) * np.array([x ** 3 for x in self.d]))
+            np.array(self.x) * np.array(self.m) * np.array([x ** 3 for x in self.d]))#Packing fraction безразмерный
 
         # параметры модели
-        self.z = None
+        self.z = None # сжимаемость
         self.pressure = None
         self.fugacity_coeffs = None
 
