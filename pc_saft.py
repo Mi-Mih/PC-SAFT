@@ -18,12 +18,12 @@ class PCSAFT:
         :param temperature: температура K
         """
         self.k = k
-        self.x = x
-        self.m = m
+        self.x = np.array(x)
+        self.m = np.array(m)
         self.rho = rho
-        self.sigma = sigma
+        self.sigma = np.array(sigma)
         self.boltzmann = 1.380649e-23
-        self.eps = np.array(eps)*(1/self.boltzmann)
+        self.eps = np.array(eps)
         self.mean_m = np.sum(np.array(self.x) * np.array(self.m))
         self.temperature = temperature
         self.d = np.array(self.sigma) * (1 - 0.12 * np.exp(-3 * np.array(self.eps) / (1 * self.temperature)))#температурно-зависимый диаметр сегмента нм

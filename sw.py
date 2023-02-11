@@ -1,5 +1,5 @@
 import numpy as np
-from chemicals.rachford_rice import flash_inner_loop
+#from chemicals.rachford_rice import flash_inner_loop
 
 
 class SW:
@@ -78,9 +78,45 @@ class SW:
         w = -3 * self.omega
         self.d = (-u * self.b + np.sqrt((u * self.b) ** 2 - 4 * w)) / 2
 
+    def F_phi(self, phi):
+        """
+        Функция для нахождение значений фазовых концентраций
+        :param phi: объем
+        :return: значение фазовых концентраций
+        """
+        F = 0
+        for i in range(len(self.K)):
+            F += (self.z[i] * (self.K[i] - 1)) / (phi * (self.K[i] - 1) + 1)
+        return F
+
+    def bisection(self, a, b, x, eps=0.00001):
+        """
+        Рекурсивная функция для нахождение нуля функции F_V методом бисекции
+        :param a: левая граница
+        :param b: правая граница
+        :param x: середина отрезка
+        :param eps: погрешность
+        :return: значение x, при котором значение функции F_V равно 0 с погрешностью eps
+        """
+        F_phi_x = self.F_phi(x)
+        F_phi_a = self.F_phi(a)
+        F_phi_b = self.F_phi(b)
+
+        if abs(F_phi_x) < eps:
+            return x
+        if F_phi_a * F_phi_b > 0:
+            raise Exception('Bisection error')
+
+        if F_phi_a * F_phi_x > 0:
+            return self.bisection(x, b, (x + b) / 2)
+        if F_phi_b * F_phi_x > 0:
+            return self.bisection(a, x, (a + x) / 2)
+
     # решение Рашфорда-Райса
     def solve_RR(self):
-        _, self.x, self.y = flash_inner_loop(list(self.z), list(self.K))
+        a = 1 / (1 - max(self.K))
+        b = 1 / (1 - min(self.K))
+        return self.bisection(a, b, (a + b) / 2)
 
     # расчёты для смесей
     def calc_am(self, flag):
@@ -142,16 +178,13 @@ class SW:
     def calc_Di(self):
         return self.d * self.P / (self.R * self.T)
 
-    def calc_fugacity_coeffs(self, flag):
+    def calc_fugacity_coeffs(self, flag, phi):
+        if flag == 'l':
+            self.x = [self.z[i] / (phi * (self.K[i] - 1) + 1) for i in range(len(self.K))]
+        else:
+            self.y = [(self.z[i] * self.K[i]) / (phi * (self.K[i] - 1) + 1) for i in range(len(self.K))]
         real_roots = []
-
-        finding_z_factor = [1,
-                            self.calc_Cm(flag) + self.calc_Dm(flag) - self.calc_Bm(flag) - 1,
-                            self.calc_Am(flag) - self.calc_Bm(flag) * self.calc_Cm(flag) + self.calc_Cm(
-                                flag) * self.calc_Dm(flag) - self.calc_Bm(flag) * self.calc_Dm(flag) - self.calc_Dm(
-                                flag) - self.calc_Cm(flag),
-                            -self.calc_Bm(flag) * self.calc_Cm(flag) * self.calc_Dm(flag) - self.calc_Cm(
-                                flag) * self.calc_Dm(flag) - self.calc_Am(flag) * self.calc_Bm(flag)]
+        finding_z_factor = []
 
         all_roots = np.roots(finding_z_factor)
 
@@ -179,22 +212,23 @@ class SW:
                 self.calc_cm(flag) - self.calc_dm(flag))) * np.log(
             (Z + self.calc_Cm(flag)) / (Z + self.calc_Dm(flag))) * self.calc_Am(flag) / (
                               self.calc_Cm(flag) - self.calc_Dm(flag)) \
-               + self.calc_Bi() / (Z - self.calc_Bm(flag)) - self.calc_Am(flag) / (
-                       self.calc_Cm(flag) - self.calc_Dm(flag)) * (
-                       self.calc_Ci() / (Z + self.calc_Cm(flag)) - self.calc_Di() / (Z + self.calc_Dm(flag))))
+                      + self.calc_Bi() / (Z - self.calc_Bm(flag)) - self.calc_Am(flag) / (
+                              self.calc_Cm(flag) - self.calc_Dm(flag)) * (
+                              self.calc_Ci() / (Z + self.calc_Cm(flag)) - self.calc_Di() / (Z + self.calc_Dm(flag))))
 
     def cycle_i(self):
         self.calc_a()
         self.calc_b()
         self.calc_c()
         self.solve_RR()
+        phi = self.solve_RR()
 
-        self.fugacity_l = self.calc_fugacity_coeffs('l')
-        self.fugacity_v = self.calc_fugacity_coeffs('v')
-        if np.sum(np.abs(self.fugacity_l / self.fugacity_v - 1) > 10e-5)==len(self.z):
-            condition=1
+        self.fugacity_l = self.calc_fugacity_coeffs('l', phi)
+        self.fugacity_v = self.calc_fugacity_coeffs('v', phi)
+        if np.sum(np.abs(self.fugacity_l / self.fugacity_v - 1) > 10e-5) == len(self.z):
+            condition = 1
         else:
-            condition=0
+            condition = 0
         return condition
 
     def launch_SWE(self):

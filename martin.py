@@ -1,5 +1,5 @@
 import numpy as np
-from chemicals.rachford_rice import flash_inner_loop
+#from chemicals.rachford_rice import flash_inner_loop
 
 
 class MARTIN:
@@ -31,7 +31,7 @@ class MARTIN:
 
     # формула Вильсона
     def calc_K(self):
-        self.K = (np.exp(5.373 * (np.ones((len(self.omega))) + self.omega) * (1 - self.T_cr / self.T)) * self.P_cr) / self.P
+        self.K = (np.exp(5.373 * (np.ones((len(self.omega))) + self.omega) * (np.ones((len(self.omega))) - self.T_cr / self.T)) * self.P_cr) / self.P
 
     # вспомогательные коэффициенты
     def calc_omega_1(self):
@@ -60,9 +60,45 @@ class MARTIN:
     def calc_b(self):
         self.b = (0.082 - 0.0713 * self.calc_omega_1()) * self.R * self.T_cr / self.P_cr
 
+    def F_phi(self, phi):
+        """
+        Функция для нахождение значений фазовых концентраций
+        :param phi: объем
+        :return: значение фазовых концентраций
+        """
+        F = 0
+        for i in range(len(self.K)):
+            F += (self.z[i] * (self.K[i] - 1)) / (phi * (self.K[i] - 1) + 1)
+        return F
+
+    def bisection(self, a, b, x, eps=0.00001):
+        """
+        Рекурсивная функция для нахождение нуля функции F_V методом бисекции
+        :param a: левая граница
+        :param b: правая граница
+        :param x: середина отрезка
+        :param eps: погрешность
+        :return: значение x, при котором значение функции F_V равно 0 с погрешностью eps
+        """
+        F_phi_x = self.F_phi(x)
+        F_phi_a = self.F_phi(a)
+        F_phi_b = self.F_phi(b)
+
+        if abs(F_phi_x) < eps:
+            return x
+        if F_phi_a * F_phi_b > 0:
+            raise Exception('Bisection error')
+
+        if F_phi_a * F_phi_x > 0:
+            return self.bisection(x, b, (x + b) / 2)
+        if F_phi_b * F_phi_x > 0:
+            return self.bisection(a, x, (a + x) / 2)
+
     # решение Рашфорда-Райса
     def solve_RR(self):
-        _, self.x, self.y = flash_inner_loop(list(self.z), list(self.K))
+        a = 1 / (1 - max(self.K)) + 0.01
+        b = 1 / (1 - min(self.K)) - 0.01
+        return self.bisection(a, b, (a + b) / 2)
 
     # расчёты для смесей
     def calc_am(self, flag):
@@ -111,46 +147,38 @@ class MARTIN:
     def calc_Ci(self):
         return self.c * self.P / (self.R * self.T)
 
-    def calc_fugacity_coeffs(self, flag):
-        real_roots = []
-        finding_z_factor = [1,
-                            self.calc_Cm(flag) - self.calc_Bm(flag) - 1,
-                            self.calc_Am(flag) - self.calc_Bm(flag) * self.calc_Cm(flag) - self.calc_Cm(flag),
-                            self.calc_Am(flag) * self.calc_Bm(flag)]
-        all_roots = np.roots(finding_z_factor)
+    def calc_fugacity_coeffs(self, flag, phi):
+        if flag == 'l':
+            self.x = [self.z[i] / (phi * (self.K[i] - 1) + 1) for i in range(len(self.K))]
+        else:
+            self.y = [(self.z[i] * self.K[i]) / (phi * (self.K[i] - 1) + 1) for i in range(len(self.K))]
 
+        real_roots = []
+        A = self.calc_Am(flag)
+        B = self.calc_Bm(flag)
+        C = self.calc_Cm(flag)
+        finding_z_factor = [1,
+                            2*C-B-1,
+                            C**2 - 2*B*C - 2*C + A,
+                            -B*C**2 - C**2 - A*B]
+        all_roots = np.roots(finding_z_factor)
         for value in all_roots:
             if abs(value.imag) < 0.00001 and value.real > 0:
                 real_roots.append(value.real)
         if flag == 'l':
-            array = self.x
             Z = min(real_roots)
         else:
             Z = max(real_roots)
-            array = self.y
-        matrix_a = np.zeros((len(array), len(array)))
-        for k in range(len(array)):
-            for j in range(len(array)):
-                matrix_a[k][j] = (1 - self.matrix_c[k][j]) * (self.a[k] * self.a[j]) ** 0.5
 
-        sum = np.zeros((len(self.z)))
-        for i in range(len(self.z)):
-            sum[i] = np.sum(array * matrix_a[i, :])
-
-        return np.exp(np.log(array * self.P) - np.log(Z - self.calc_Bm(flag)) \
-                      - (2 * sum / self.calc_am(flag) - self.c / self.calc_cm(flag)) * np.log(
-            (Z + self.calc_Cm(flag)) / Z) * self.calc_am(flag) / (self.calc_Cm(flag))) + self.calc_Bi() / (
-                           Z - self.calc_Bm(flag)) \
-               - self.calc_Am(flag) / self.calc_Cm(flag) * (self.calc_Ci() / (Z + self.calc_Cm(flag)))
+        return np.exp(Z-1+np.log(1/(Z-self.calc_Bm(flag)))-self.calc_Am(flag)/(self.calc_Cm(flag)+Z)) * self.P + 0.001
 
     def cycle_i(self):
         self.calc_a()
         self.calc_b()
         self.calc_c()
-        self.solve_RR()
-
-        self.fugacity_l = self.calc_fugacity_coeffs('l')
-        self.fugacity_v = self.calc_fugacity_coeffs('v')
+        phi = self.solve_RR()
+        self.fugacity_l = self.calc_fugacity_coeffs('l', phi)
+        self.fugacity_v = self.calc_fugacity_coeffs('v', phi)
         if np.sum(np.abs(self.fugacity_l / self.fugacity_v - 1) > 10e-5)==len(self.z):
             condition=1
         else:

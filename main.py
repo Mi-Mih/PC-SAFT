@@ -5,12 +5,15 @@ from validation import prepare_data
 
 def main(file_path='diplom_1.txt'):
     d_martin, d_sw, d_pcsaft = prepare_data(file_path)
-    martin_eq = MARTIN(T=400, P=4, **d_martin)
+    T = 200
+    P = 4
+    d_pcsaft['temperature'], d_pcsaft['rho'] = T, 1.18e-2
+    martin_eq = MARTIN(T=T, P=P, **d_martin)
 
-    #martin_eq.launch_MartinE()
+    martin_eq.launch_MartinE()
 
-    sw_eq = SW(P=4,T=400,**d_sw)
-    sw_eq.launch_SWE()
+    sw_eq = SW(P=P,T=T,**d_sw)
+    #sw_eq.launch_SWE()
     '''
     liquid_state = {'x': [0.1000, 0.3000, 0.6000],
                     'm': [1, 1.6069, 2.002],
@@ -34,7 +37,7 @@ def main(file_path='diplom_1.txt'):
                           [3.00e-04, 0.00e+00, 5.10e-03],
                           [1.15e-02, 5.10e-03, 0.00e+00]]}
     '''
-    state = launch_pcsaft(**d_pcsaft, **d_pcsaft)
+    state = launch_pcsaft(d_pcsaft, d_pcsaft)
     print(state)
 
 

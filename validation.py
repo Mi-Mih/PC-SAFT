@@ -11,6 +11,16 @@ class VALIDATION:
             self.structures = json.load(file)
 
 
+def calc_m_eps_sigma(type_el, molar):
+    coeffs = {'parafin': {'m': [0.02569, 0.8709], 'm_sigma': [1.72840, 18.787], 'm_eps_k': [6.8248, 141.1400]},
+              'naften': {'m': [0.02254, 0.6827], 'm_sigma': [1.7115, 1.9393], 'm_eps_k': [6.4962, 154, 53]},
+              'arafen': {'m': [0.02576, 0.2588], 'm_sigma': [1.7539, -21.324], 'm_eps_k': [6.6756, 172.4]}}
+    d = {}
+    for k in coeffs[type_el].keys():
+        d[k] = coeffs[type_el][k][0] * molar + coeffs[type_el][k][1]
+    return d
+
+
 def prepare_data(file_path='diplom_1.txt'):
     v = VALIDATION(file_path)
     d_martin = {'omega': [], 'T_cr': [], 'P_cr': []}
@@ -41,6 +51,15 @@ def prepare_data(file_path='diplom_1.txt'):
     d_martin['matrix_c'] = matrix_c
     d_sw['matrix_c'] = matrix_c
     d_pcsaft['k'] = matrix_c
+
+    d_pcsaft['m'],d_pcsaft['sigma'],d_pcsaft['eps'] = [],[],[]
+    for i in v.structures.keys():
+        molar = v.gas_parameters[i]['M']
+        type_el = v.gas_parameters[i]['type_el']
+        d=calc_m_eps_sigma(type_el, molar)
+        d_pcsaft['m'].append(d['m'])
+        d_pcsaft['sigma'].append((d['m_sigma']/d['m'])**(1/3))
+        d_pcsaft['eps'].append(d['m_eps_k']/d['m'])
 
     return d_martin, d_sw, d_pcsaft
 
